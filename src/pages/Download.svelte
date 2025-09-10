@@ -1,6 +1,3 @@
-B •543 lines
-•
-Formatting may be inconsistent from source
 <script lang="ts">
   import Button from '$lib/components/ui/button.svelte'
   import Card from '$lib/components/ui/card.svelte'
@@ -24,42 +21,7 @@ Formatting may be inconsistent from source
   $: allDownloads = (() => {
     const combined = [...$files, ...$downloadQueue]
 
-    // If there's a search hash, prioritize matching files
-    if (searchHash.trim()) {
-      const matchingFiles = combined.filter(f => 
-        f.hash.toLowerCase().includes(searchHash.toLowerCase()) ||
-        f.name.toLowerCase().includes(searchHash.toLowerCase())
-      )
-      const nonMatchingFiles = combined.filter(f => 
-        !f.hash.toLowerCase().includes(searchHash.toLowerCase()) &&
-        !f.name.toLowerCase().includes(searchHash.toLowerCase())
-      )
-      
-      // Sort matching files by status first, then non-matching files
-      const statusOrder = {
-        'downloading': 0,
-        'paused': 1,
-        'completed': 2,
-        'queued': 3,
-        'failed': 4,
-        'uploaded': 5,
-        'seeding': 6
-      }
-      
-      const sortByStatus = (a, b) => {
-        const statusA = statusOrder[a.status] ?? 999
-        const statusB = statusOrder[b.status] ?? 999
-        const statusDiff = statusA - statusB
-        return statusDiff === 0 ? a.id.localeCompare(b.id) : statusDiff
-      }
-      
-      return [
-        ...matchingFiles.sort(sortByStatus),
-        ...nonMatchingFiles.sort(sortByStatus)
-      ]
-    }
-
-    // Normal sorting when no search hash
+    // Sort by button order: active (downloading) > paused > completed > queued > failed
     const statusOrder = {
       'downloading': 0,
       'paused': 1,
@@ -83,7 +45,6 @@ Formatting may be inconsistent from source
       return statusDiff
     })
   })()
-  
   
   // Filter downloads based on selected status
   $: filteredDownloads = (() => {
@@ -158,20 +119,16 @@ Formatting may be inconsistent from source
     }
     
     // prevents duplicates in files or queue 
-    const exists = [...$files, ...$downloadQueue].some(f => f.hash === searchHash)
+    const exists = [...$files, ...$downloadQueue].some(f => f.hash === newFile.hash)
     if (exists) {
-      // Don't clear searchHash if file exists - keep it for search highlighting
+      searchHash = ''
       return
     }
     
     downloadQueue.update(q => [...q, newFile])
+    searchHash = ''
     processQueue()
   }
-
-  // Function to clear search
-function clearSearch() {
-  searchHash = ''
-}
 
   function processQueue() {
     // Only prevent starting new downloads if we've reached the max concurrent limit
@@ -290,8 +247,6 @@ function clearSearch() {
     if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB'
     return (bytes / 1048576).toFixed(2) + ' MB'
   }
-
-
 </script>
 
 <div class="space-y-6">
@@ -305,30 +260,17 @@ function clearSearch() {
       <div>
         <Label for="hash-input">File Hash</Label>
         <div class="flex flex-col sm:flex-row gap-2 mt-2">
-            <Input
-              id="hash-input"
-              bind:value={searchHash}
-              placeholder="Enter file hash (e.g., QmZ4tDuvesekqMD...)"
-              class="flex-1"
-            />
-            <div class="flex gap-2">
-              <Button on:click={startDownload} disabled={!searchHash}>
-                <Search class="h-4 w-4 mr-2" />
-                Search & Download
-              </Button>
-              {#if searchHash}
-                <Button variant="outline" on:click={clearSearch}>
-                  <X class="h-4 w-4 mr-2" />
-                  Clear
-                </Button>
-              {/if}
-            </div>
-          </div>
-          {#if searchHash}
-            <p class="text-xs text-muted-foreground mt-1">
-              Searching for: <span class="font-mono">{searchHash}</span>
-            </p>
-          {/if}
+          <Input
+            id="hash-input"
+            bind:value={searchHash}
+            placeholder="Enter file hash (e.g., QmZ4tDuvesekqMD...)"
+            class="flex-1"
+          />
+          <Button on:click={startDownload} disabled={!searchHash}>
+            <Search class="h-4 w-4 mr-2" />
+            Search & Download
+          </Button>
+        </div>
       </div>
     </div>
   </Card>
